@@ -1,5 +1,6 @@
 # pragma version 0.4.3
 
+
 @pure
 @internal
 def sub_or_zero(a: uint256, b: uint256) -> uint256:
