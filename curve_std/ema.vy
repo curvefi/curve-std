@@ -18,12 +18,13 @@ ALLOWED_EMAS: public(immutable(DynArray[String[4], MAX_EMAS]))
 # Vyper doesn't support passing value by reference yet, so we use
 # a mapping and a 4 character string as a pointer to the corresponding
 # storage slot.
-emas: public(HashMap[String[4], EMA])
+# NOTE: Do not modify directly; use setup, update, or save instead.
+_emas: public(HashMap[String[4], EMA])
 
 
 @deploy
-def __init__(_allowed_emas: DynArray[String[4], MAX_EMAS]):
-    ALLOWED_EMAS = _allowed_emas
+def __init__(_allowed__emas: DynArray[String[4], MAX_EMAS]):
+    ALLOWED_EMAS = _allowed__emas
 
 
 @internal
@@ -41,11 +42,11 @@ def setup(_ema_id: String[4], _initial_value: uint256, _ema_time: uint256):
     # Setting an ema_time of 1 is equivalent to no smoothing at all
     assert self._is_allowed(_ema_id)  # dev: id not allowed
     assert _ema_time > 0  # dev: invalid ema_time
-    ema: EMA = self.emas[_ema_id]
+    ema: EMA = self._emas[_ema_id]
     ema.ema_time = _ema_time
     ema.prev_value = _initial_value
     ema.prev_timestamp = block.timestamp
-    self.emas[_ema_id] = ema
+    self._emas[_ema_id] = ema
 
 
 @internal
@@ -54,16 +55,16 @@ def set_ema_time(_ema_id: String[4], _ema_time: uint256):
     # Setting an ema_time of 1 is equivalent to no smoothing at all
     assert self._is_allowed(_ema_id)  # dev: id not allowed
     assert _ema_time > 0  # dev: invalid ema_time
-    ema: EMA = self.emas[_ema_id]
+    ema: EMA = self._emas[_ema_id]
     ema.ema_time = _ema_time
-    self.emas[_ema_id] = ema
+    self._emas[_ema_id] = ema
 
 
 @internal
 @view
 def compute(_ema_id: String[4], _new_value: uint256) -> uint256:
     assert self._is_allowed(_ema_id)  # dev: id not allowed
-    ema: EMA = self.emas[_ema_id]
+    ema: EMA = self._emas[_ema_id]
     assert ema.ema_time > 0  # dev: ema not initialized
     dt: uint256 = block.timestamp - ema.prev_timestamp
 
@@ -91,9 +92,9 @@ def save(_ema_id: String[4], _value: uint256):
     @param _value The smoothed value to persist
     """
     assert self._is_allowed(_ema_id)  # dev: id not allowed
-    ema: EMA = self.emas[_ema_id]
+    ema: EMA = self._emas[_ema_id]
     # redundant when called via update, but needed when save is called directly
     assert ema.ema_time > 0  # dev: ema not initialized
     ema.prev_value = _value
     ema.prev_timestamp = block.timestamp
-    self.emas[_ema_id] = ema
+    self._emas[_ema_id] = ema
