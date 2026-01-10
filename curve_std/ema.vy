@@ -79,9 +79,21 @@ def compute(_ema_id: String[4], _new_value: uint256) -> uint256:
 @internal
 def update(_ema_id: String[4], _new_value: uint256) -> uint256:
     smoothed: uint256 = self.compute(_ema_id, _new_value)
+    self.save(_ema_id, smoothed)
+    return smoothed
+
+
+@internal
+def save(_ema_id: String[4], _value: uint256):
+    """
+    @notice Persist a pre-computed EMA value without recalculating
+    @param _ema_id The identifier for the EMA
+    @param _value The smoothed value to persist
+    """
+    assert self._is_allowed(_ema_id)  # dev: id not allowed
     ema: EMA = self.emas[_ema_id]
+    # redundant when called via update, but needed when save is called directly
     assert ema.ema_time > 0  # dev: ema not initialized
-    ema.prev_value = smoothed
+    ema.prev_value = _value
     ema.prev_timestamp = block.timestamp
     self.emas[_ema_id] = ema
-    return smoothed
