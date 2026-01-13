@@ -43,6 +43,8 @@ jobs:
         include:
           - folder: "tests/unitary"
             runs-on: "ubuntu-latest"
+          - folder: "tests/e2e"
+            runs-on: "ubuntu-latest"
           - folder: "tests/fuzzing"
             runs-on: "ubuntu-latest"
     steps:
