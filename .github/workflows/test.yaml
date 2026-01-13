@@ -19,18 +19,19 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
-
-      - name: Cache venv
-        uses: actions/cache@v5
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          cache-dependency-glob: |
+            **/uv.lock
+            **/pyproject.toml
+            **/.python-version
 
       - name: Install Requirements
-        run: uv sync
+        run: uv sync --frozen --managed-python
 
       - name: Run pre-commit checks
-        run: uv run pre-commit run --all-files --show-diff-on-failure
+        run: uv run --managed-python pre-commit run --all-files --show-diff-on-failure
+
+      - name: Prune cache for CI
+        run: uv cache prune --ci
 
   tests:
     needs: pre-commit
@@ -53,12 +54,10 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
-
-      - name: Cache venv
-        uses: actions/cache@v5
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          cache-dependency-glob: |
+            **/uv.lock
+            **/pyproject.toml
+            **/.python-version
 
       - name: Cache Compiler Installations
         uses: actions/cache@v5
@@ -68,8 +67,10 @@ jobs:
           key: compiler-cache-${{ hashFiles('**/uv.lock') }}
 
       - name: Install Requirements
-        run: uv sync
+        run: uv sync --frozen --managed-python
 
       - name: Run tests
-        run: |
-          uv run pytest ${{ matrix.folder }} -n auto
+        run: uv run --managed-python pytest ${{ matrix.folder }} -n auto
+
+      - name: Prune cache for CI
+        run: uv cache prune --ci
