@@ -21,4 +21,5 @@ dev = [
     "hypothesis>=6.148.7",
     "pytest>=9.0.2",
     "titanoboa>=0.2.8",
+    "pre-commit==4.3.0",
 ]

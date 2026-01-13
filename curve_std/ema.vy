@@ -2,11 +2,11 @@
 @notice Exponential Moving Average helper module.
 @author Curve Finance
 @dev - This module provides functionality to compute and persist
-     multiple EMAs identified by a string ID. 
+     multiple EMAs identified by a string ID.
      - The EMA is computed from the queued value from the
      previous update, then queues the newly supplied value
      for the next update to reduce manipulation risk.
-     - The module intentionally allows EMAs to be created at 
+     - The module intentionally allows EMAs to be created at
      construction time only.
 """
 
@@ -24,7 +24,7 @@ struct EMA:
 # @notice Initial configuration for an EMA instance
 struct EMAConfig:
     ema_id: String[4]
-    initial_value: uint256 
+    initial_value: uint256
     ema_time: uint256
 
 
@@ -45,7 +45,7 @@ ALLOWED_EMAS: public(immutable(DynArray[String[4], MAX_EMAS]))
 # a mapping and a 4 character string as a pointer to the corresponding
 # storage slot.
 # @dev This is not part of the public API and modifying it directly
-# may lead to unexpected behavior. 
+# may lead to unexpected behavior.
 _emas: public(HashMap[String[4], EMA])
 
 
@@ -67,7 +67,7 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
             ema_time=config.ema_time,
             prev_value=config.initial_value,
             prev_timestamp=block.timestamp,
-            queued_value=config.initial_value
+            queued_value=config.initial_value,
         )
         allow_list.append(id)
 
@@ -140,12 +140,12 @@ def update(_ema_id: String[4], _new_value: uint256) -> uint256:
     @dev The queueing mechanism helps to reduce manipulation risk, in a real
          usage scenario a flash loan attacker would have to sustain their
          beyond a single transaction to impact on the EMA, as repaying the
-         flash loan would queue a benign value for the next update. 
+         flash loan would queue a benign value for the next update.
     @param _ema_id The identifier for the EMA
     @param _new_value The new value to queue for the next update
     @return The computed EMA value
     """
-    # (possibly) computing the smoothed value more than once 
+    # (possibly) computing the smoothed value more than once
     # in the same transaction to prioritize correctness.
     # All other approaches considered so far would make the
     # API of this library more error prone (e.g. direct access
