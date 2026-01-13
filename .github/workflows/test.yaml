@@ -19,14 +19,13 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Cache virtual environment
+      - name: Cache venv and Python
         uses: actions/cache@v5
         with:
-          path: .venv
+          path: |
+            .venv
+            ~/.local/share/uv/python
           key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-
-      - name: Install Python 3.12.6
-        run: uv python install 3.12.6
 
       - name: Install Requirements
         run: uv sync
@@ -55,10 +54,12 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Cache virtual environment
+      - name: Cache venv and Python
         uses: actions/cache@v5
         with:
-          path: .venv
+          path: |
+            .venv
+            ~/.local/share/uv/python
           key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
       - name: Cache Compiler Installations
@@ -67,9 +68,6 @@ jobs:
           path: |
             ~/.vvm
           key: compiler-cache-${{ hashFiles('**/uv.lock') }}
-
-      - name: Set up Python 3.12.6
-        run: uv python install 3.12.6
 
       - name: Install Requirements
         run: uv sync
