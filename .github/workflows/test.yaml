@@ -18,13 +18,12 @@ jobs:
         uses: astral-sh/setup-uv@v7.2
         with:
           enable-cache: true
+          cache-python: true
 
-      - name: Cache venv and Python
+      - name: Cache venv
         uses: actions/cache@v5
         with:
-          path: |
-            .venv
-            ~/.local/share/uv/python
+          path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
       - name: Install Requirements
@@ -53,13 +52,12 @@ jobs:
         uses: astral-sh/setup-uv@v7.2
         with:
           enable-cache: true
+          cache-python: true
 
-      - name: Cache venv and Python
+      - name: Cache venv
         uses: actions/cache@v5
         with:
-          path: |
-            .venv
-            ~/.local/share/uv/python
+          path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
       - name: Cache Compiler Installations
