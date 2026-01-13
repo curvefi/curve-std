@@ -46,7 +46,7 @@ ALLOWED_EMAS: public(immutable(DynArray[String[4], MAX_EMAS]))
 # storage slot.
 # @dev This is not part of the public API and modifying it directly
 # may lead to unexpected behavior.
-_emas: public(HashMap[String[4], EMA])
+_emas: HashMap[String[4], EMA]
 
 
 @deploy

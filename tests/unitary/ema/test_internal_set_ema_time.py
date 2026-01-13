@@ -8,7 +8,7 @@ def test_default_behavior(ema):
     ema_id = DUMMY_ALLOWED_EMAS[0]
     ema.internal.set_ema_time(ema_id, 42)
 
-    slot = ema.emas(ema_id)
+    slot = ema.eval(f"self._emas['{ema_id}']")
     assert slot.ema_time == 42
 
 
