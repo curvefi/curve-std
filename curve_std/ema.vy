@@ -113,7 +113,7 @@ def compute(_ema_id: String[4], _new_value: uint256) -> uint256:
         return ema.prev_value
 
     mul: uint256 = convert(math._wad_exp(-convert(dt * WAD // ema.ema_time, int256)), uint256)
-    return (_new_value * mul + ema.prev_value * (WAD - mul)) // WAD
+    return (ema.prev_value * mul + _new_value * (WAD - mul)) // WAD
 
 
 @internal
