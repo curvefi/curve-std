@@ -1,9 +1,12 @@
 """
 @notice Exponential Moving Average helper module.
 @author Curve Finance
-@dev This module provides functionality to compute and persist
-     multiple EMAs identified by a string ID.
-     The module intentionally allows EMAs to be created at 
+@dev - This module provides functionality to compute and persist
+     multiple EMAs identified by a string ID. 
+     - The EMA is computed from the queued value from the
+     previous update, then queues the newly supplied value
+     for the next update to reduce manipulation risk.
+     - The module intentionally allows EMAs to be created at 
      construction time only.
 """
 
@@ -15,6 +18,7 @@ struct EMA:
     ema_time: uint256
     prev_value: uint256
     prev_timestamp: uint256
+    queued_value: uint256
 
 
 # @notice Initial configuration for an EMA instance
@@ -47,6 +51,10 @@ _emas: public(HashMap[String[4], EMA])
 
 @deploy
 def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
+    """
+    @notice Initialize the EMA instances based on the provided configuration.
+    @param _ema_config List of EMA configurations
+    """
     allow_list: DynArray[String[4], MAX_EMAS] = []
     for config: EMAConfig in _ema_config:
         # Setting an ema_time of 0 is not allowed, as it would break the math
@@ -58,15 +66,22 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
         self._emas[id] = EMA(
             ema_time=config.ema_time,
             prev_value=config.initial_value,
-            prev_timestamp=block.timestamp
+            prev_timestamp=block.timestamp,
+            queued_value=config.initial_value
         )
         allow_list.append(id)
 
     ALLOWED_EMAS = allow_list
 
+
 @internal
 @view
 def _is_allowed(_ema_id: String[4]) -> bool:
+    """
+    @dev The `in` operator is not supported for DynArrays
+         in Vyper yet, so we implement this helper function.
+    @param _ema_id The identifier for the EMA
+    """
     for ema_id: String[4] in ALLOWED_EMAS:
         if ema_id == _ema_id:
             return True
@@ -78,14 +93,13 @@ def set_ema_time(_ema_id: String[4], _ema_time: uint256):
     """
     @notice Update the ema_time for a given EMA id.
     @dev Setting an ema_time of 0 is not allowed, as it would break the math.
-    @dev We first compute and save the current EMA value to avoid discontinuities
-         in the smoothed value. For this reason exposing this function in a 
-         permissionless way should be done with caution.
+    @dev We first update the current EMA value to avoid discontinuities
+         in the smoothed value.
     @param _ema_id The identifier for the EMA
     @param _ema_time The new ema_time to set
     """
     assert self._is_allowed(_ema_id)  # dev: id not allowed
-    self.compute_and_save(_ema_id, self._emas[_ema_id].prev_value)
+    self.update(_ema_id, self._emas[_ema_id].queued_value)
     assert _ema_time > 0  # dev: invalid ema_time
     ema: EMA = self._emas[_ema_id]
     ema.ema_time = _ema_time
@@ -94,17 +108,18 @@ def set_ema_time(_ema_id: String[4], _ema_time: uint256):
 
 @internal
 @view
-def compute(_ema_id: String[4], _new_value: uint256) -> uint256:
+def read(_ema_id: String[4]) -> uint256:
     """
-    @notice Compute the EMA value for a given EMA id and new value.
+    @notice Compute the EMA value for a given EMA id.
+    @dev The queued value from the previous update is used as input.
     @dev block.timestamp is chain dependent and can be manipulated within
-            relatively small bounds. This can affect the EMA computation.
+         relatively small bounds. This can affect the EMA computation.
     @param _ema_id The identifier for the EMA
-    @param _new_value The new value to compute the EMA for
     @return The computed EMA value
     """
     assert self._is_allowed(_ema_id)  # dev: id not allowed
     ema: EMA = self._emas[_ema_id]
+
     dt: uint256 = block.timestamp - ema.prev_timestamp
 
     if dt == 0:
@@ -113,37 +128,33 @@ def compute(_ema_id: String[4], _new_value: uint256) -> uint256:
         return ema.prev_value
 
     mul: uint256 = convert(math._wad_exp(-convert(dt * WAD // ema.ema_time, int256)), uint256)
-    return (ema.prev_value * mul + _new_value * (WAD - mul)) // WAD
+    return (ema.prev_value * mul + ema.queued_value * (WAD - mul)) // WAD
 
 
 @internal
-def _save(_ema_id: String[4], _value: uint256):
+def update(_ema_id: String[4], _new_value: uint256) -> uint256:
     """
-    @notice Persist a pre-computed EMA value without recalculating
-    @dev This function is not part of the public API and should be
-         used with caution from other contracts: it can lead to
-         inconsistent EMA values if the provided value does not match
-         the expected EMA computation. It can be useful in scenarios 
-         where the computation happens in a view function and the
-         the result can only be saved later.
+    @notice Compute and persist the EMA value for a given EMA id.
+    @dev The queued value from the previous update is used as input, and
+         the new value is queued for the next update.
+    @dev The queueing mechanism helps to reduce manipulation risk, in a real
+         usage scenario a flash loan attacker would have to sustain their
+         beyond a single transaction to impact on the EMA, as repaying the
+         flash loan would queue a benign value for the next update. 
     @param _ema_id The identifier for the EMA
-    @param _value The smoothed value to persist
-    """
-    assert self._is_allowed(_ema_id)  # dev: id not allowed
-    ema: EMA = self._emas[_ema_id]
-    ema.prev_value = _value
-    ema.prev_timestamp = block.timestamp
-    self._emas[_ema_id] = ema
-
-
-@internal
-def compute_and_save(_ema_id: String[4], _new_value: uint256) -> uint256:
-    """
-    @notice Compute and persist the EMA value for a given EMA id and new value.
-    @param _ema_id The identifier for the EMA
-    @param _new_value The new value to compute the EMA for
+    @param _new_value The new value to queue for the next update
     @return The computed EMA value
     """
-    smoothed: uint256 = self.compute(_ema_id, _new_value)
-    self._save(_ema_id, smoothed)
+    # (possibly) computing the smoothed value more than once 
+    # in the same transaction to prioritize correctness.
+    # All other approaches considered so far would make the
+    # API of this library more error prone (e.g. direct access
+    # to storage variables can lead to inconsistent EMAs).
+    smoothed: uint256 = self.read(_ema_id)
+
+    ema: EMA = self._emas[_ema_id]
+    ema.prev_value = smoothed
+    ema.prev_timestamp = block.timestamp
+    ema.queued_value = _new_value
+    self._emas[_ema_id] = ema
     return smoothed
