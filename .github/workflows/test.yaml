@@ -73,4 +73,3 @@ jobs:
 
       - name: Run tests
         run: uv run --managed-python pytest ${{ matrix.folder }} -n auto
-

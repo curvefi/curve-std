@@ -33,9 +33,13 @@ class EMAStateMachine(RuleBasedStateMachine):
     def update(self, new_value):
         """Update the EMA with a new value."""
         dt = self.elapsed_time - self.last_update_time
-        expected = reference_compute(self.persisted_prev, self.persisted_queued, self.ema_time, dt)
+        expected = reference_compute(
+            self.persisted_prev, self.persisted_queued, self.ema_time, dt
+        )
         returned = self.ema.internal.update(TEST_EMA_ID, new_value)
-        assert returned == expected, f"update {returned} != expected {expected} for dt {dt}"
+        assert returned == expected, (
+            f"update {returned} != expected {expected} for dt {dt}"
+        )
         self.persisted_prev = returned
         self.persisted_queued = new_value
         self.last_update_time = self.elapsed_time
@@ -52,8 +56,12 @@ class EMAStateMachine(RuleBasedStateMachine):
     def bounded_by_historical_extremes(self):
         """EMA should never exceed the range of values it has seen."""
         current = self.ema.internal.read(TEST_EMA_ID)
-        assert current >= self.min_value_seen, f"EMA {current} below min seen {self.min_value_seen}"
-        assert current <= self.max_value_seen, f"EMA {current} above max seen {self.max_value_seen}"
+        assert current >= self.min_value_seen, (
+            f"EMA {current} below min seen {self.min_value_seen}"
+        )
+        assert current <= self.max_value_seen, (
+            f"EMA {current} above max seen {self.max_value_seen}"
+        )
 
     @invariant()
     def no_overshoot(self):
@@ -61,8 +69,9 @@ class EMAStateMachine(RuleBasedStateMachine):
         current = self.ema.internal.read(TEST_EMA_ID)
         lower = min(self.persisted_prev, self.persisted_queued)
         upper = max(self.persisted_prev, self.persisted_queued)
-        assert lower <= current <= upper, f"EMA {current} overshot bounds [{lower}, {upper}]"
-
+        assert lower <= current <= upper, (
+            f"EMA {current} overshot bounds [{lower}, {upper}]"
+        )
 
     @invariant()
     def monotonic_convergence(self):
@@ -76,9 +85,13 @@ class EMAStateMachine(RuleBasedStateMachine):
 
         # Check monotonic movement towards target
         if self.persisted_queued >= current:
-            assert current <= mid <= later, "EMA not monotonically increasing towards target"
+            assert current <= mid <= later, (
+                "EMA not monotonically increasing towards target"
+            )
         else:
-            assert current >= mid >= later, "EMA not monotonically decreasing towards target"
+            assert current >= mid >= later, (
+                "EMA not monotonically decreasing towards target"
+            )
 
     @invariant()
     def eventual_convergence(self):
@@ -88,8 +101,12 @@ class EMAStateMachine(RuleBasedStateMachine):
             future = self.ema.internal.read(TEST_EMA_ID)
 
         gap = abs(future - self.persisted_queued)
-        assert gap == 0, f"EMA {future} != {self.persisted_queued} within tolerance after 100x ema_time"
+        assert gap == 0, (
+            f"EMA {future} != {self.persisted_queued} within tolerance after 100x ema_time"
+        )
 
 
 TestEMA = EMAStateMachine.TestCase
-TestEMA.settings = settings(deadline=None, phases=[Phase.explicit, Phase.reuse, Phase.generate, Phase.target])
+TestEMA.settings = settings(
+    deadline=None, phases=[Phase.explicit, Phase.reuse, Phase.generate, Phase.target]
+)
