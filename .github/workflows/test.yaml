@@ -19,6 +19,7 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
+          prune-cache: false
           cache-dependency-glob: |
             **/uv.lock
             **/pyproject.toml
@@ -30,8 +31,6 @@ jobs:
       - name: Run pre-commit checks
         run: uv run --managed-python pre-commit run --all-files --show-diff-on-failure
 
-      - name: Prune cache for CI
-        run: uv cache prune --ci
 
   tests:
     needs: pre-commit
@@ -56,6 +55,7 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
+          prune-cache: false
           cache-dependency-glob: |
             **/uv.lock
             **/pyproject.toml
@@ -74,5 +74,3 @@ jobs:
       - name: Run tests
         run: uv run --managed-python pytest ${{ matrix.folder }} -n auto
 
-      - name: Prune cache for CI
-        run: uv cache prune --ci
