@@ -1,3 +1,4 @@
+# pragma version 0.4.3
 """
 @notice Exponential Moving Average helper module.
 @author Curve Finance
