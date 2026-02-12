@@ -38,7 +38,6 @@ def _add_admin(admin: address) -> uint256:
     """
     assert admin != empty(address)
     id: uint256 = len(self.admins)
-    assert id < MAX_ADMINS, "Too many admins"
     self.admins.append(admin)
     log SetGroupAdmin(group_id=id, admin=admin)
     return id
@@ -63,6 +62,7 @@ def _set_group(who: address, group_id: uint256):
     @param group_id Admin group id.
     """
     assert group_id < len(self.admins), "Unknown group id"
+    assert who != empty(address)  # call from explorer should show default admin
     self.admin_group_of[who] = group_id
     log SetGroup(who=who, group_id=group_id)
 
