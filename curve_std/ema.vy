@@ -98,9 +98,7 @@ def set_ema_time(_ema_id: String[4], _ema_time: uint256):
     assert self._is_allowed(_ema_id)  # dev: id not allowed
     self.update(_ema_id, self._emas[_ema_id].queued_value)
     assert _ema_time > 0  # dev: invalid ema_time
-    ema: EMA = self._emas[_ema_id]
-    ema.ema_time = _ema_time
-    self._emas[_ema_id] = ema
+    self._emas[_ema_id].ema_time = _ema_time
 
 
 @internal
