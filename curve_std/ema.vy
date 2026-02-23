@@ -79,14 +79,10 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
 @view
 def _is_allowed(_ema_id: String[4]) -> bool:
     """
-    @dev The `in` operator is not supported for DynArrays
-         in Vyper yet, so we implement this helper function.
+    @dev We use ema_time > 0 as a sentinel for initialized EMAs.
     @param _ema_id The identifier for the EMA
     """
-    for ema_id: String[4] in ALLOWED_EMAS:
-        if ema_id == _ema_id:
-            return True
-    return False
+    return self._emas[_ema_id].ema_time > 0
 
 
 @internal
