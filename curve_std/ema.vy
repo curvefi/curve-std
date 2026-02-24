@@ -147,9 +147,10 @@ def update(_ema_id: String[4], _new_value: uint256) -> uint256:
     # to storage variables can lead to inconsistent EMAs).
     smoothed: uint256 = self.read(_ema_id)
 
-    ema: EMA = self._emas[_ema_id]
-    ema.prev_value = smoothed
-    ema.prev_timestamp = block.timestamp
-    ema.queued_value = _new_value
-    self._emas[_ema_id] = ema
+    self._emas[_ema_id] = EMA(
+        ema_time=self._emas[_ema_id].ema_time,
+        prev_value=smoothed,
+        prev_timestamp=block.timestamp,
+        queued_value=_new_value,
+    )
     return smoothed
