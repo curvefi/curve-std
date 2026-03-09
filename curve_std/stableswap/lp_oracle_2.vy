@@ -154,7 +154,7 @@ def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
 def _y_from_bisection(A_raw: uint256, p: uint256) -> uint256:
     # Solve g(y) = p(y) - p_target = 0 on monotone branch y in (0, 1/2].
     assert p >= WAD
-    lo: uint256 = WAD // 10**5  # y for p ~ 5000 and A=100_000
+    lo: uint256 = 1
     hi: uint256 = WAD // 2 + 1  # y for p = 1
 
     for _: uint256 in range(BISECTION_ITERS):
