@@ -173,7 +173,6 @@ def _y_from_bisection(A_raw: uint256, p: uint256) -> uint256:
 
         if unsafe_sub(hi, lo) <= 1:
             return hi
-
     raise "Didn't converge"  # Unreachable
 
 
