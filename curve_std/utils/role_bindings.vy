@@ -9,15 +9,18 @@
     3. Update a group assignee once and apply it to all bound contracts.
 """
 
+
 event SetRoleGroupAssignee:
     role_id: indexed(uint256)
     group_id: indexed(uint256)
     assignee: indexed(address)
 
+
 event SetRoleBinding:
     role_id: indexed(uint256)
     subject: indexed(address)
     group_id: indexed(uint256)
+
 
 MAX_GROUPS: constant(uint256) = 64
 
@@ -25,6 +28,7 @@ MAX_GROUPS: constant(uint256) = 64
 assignee_by_role_group: public(HashMap[uint256, DynArray[address, MAX_GROUPS]])
 # role_id -> subject -> group_id
 group_of: public(HashMap[uint256, HashMap[address, uint256]])
+
 
 @internal
 def _init_role(role_id: uint256, assignee: address):
@@ -37,6 +41,7 @@ def _init_role(role_id: uint256, assignee: address):
     assert len(self.assignee_by_role_group[role_id]) == 0, "Role already exists"
     self.assignee_by_role_group[role_id].append(assignee)
     log SetRoleGroupAssignee(role_id=role_id, group_id=0, assignee=assignee)
+
 
 @internal
 def _add_role_group(role_id: uint256, assignee: address) -> uint256:
@@ -53,6 +58,7 @@ def _add_role_group(role_id: uint256, assignee: address) -> uint256:
     log SetRoleGroupAssignee(role_id=role_id, group_id=group_id, assignee=assignee)
     return group_id
 
+
 @view
 @internal
 def _resolve_assignee_of(role_id: uint256, subject: address) -> address:
@@ -65,6 +71,7 @@ def _resolve_assignee_of(role_id: uint256, subject: address) -> address:
     group_id: uint256 = self.group_of[role_id][subject]
     assert group_id < len(self.assignee_by_role_group[role_id]), "Unknown group id"
     return self.assignee_by_role_group[role_id][group_id]
+
 
 @internal
 def _bind_subject_to_group(role_id: uint256, subject: address, group_id: uint256):
@@ -79,6 +86,7 @@ def _bind_subject_to_group(role_id: uint256, subject: address, group_id: uint256
     self.group_of[role_id][subject] = group_id
     log SetRoleBinding(role_id=role_id, subject=subject, group_id=group_id)
 
+
 @internal
 def _set_group_assignee(role_id: uint256, group_id: uint256, new_assignee: address):
     """
@@ -91,6 +99,7 @@ def _set_group_assignee(role_id: uint256, group_id: uint256, new_assignee: addre
     self.assignee_by_role_group[role_id][group_id] = new_assignee
     log SetRoleGroupAssignee(role_id=role_id, group_id=group_id, assignee=new_assignee)
 
+
 @view
 @internal
 def _default_assignee(role_id: uint256) -> address:
@@ -100,9 +109,10 @@ def _default_assignee(role_id: uint256) -> address:
     """
     return self.assignee_by_role_group[role_id][0]
 
+
 @view
 @external
-def resolve_assignee(role_id: uint256, _subject: address=msg.sender) -> address:
+def resolve_assignee(role_id: uint256, _subject: address = msg.sender) -> address:
     """
     @notice Return assignee value for role_id and subject.
     @param role_id Role identifier.
