@@ -39,7 +39,7 @@ def convertToAssets(shareAmount: uint256) -> uint256:
 
 
 @view
-def maxDeposit(owner: address) -> uint256:
+def maxDeposit(recipient: address) -> uint256:
     ...
 
 
@@ -53,7 +53,7 @@ def deposit(assets: uint256, receiver: address) -> uint256:
 
 
 @view
-def maxMint(owner: address) -> uint256:
+def maxMint(recipient: address) -> uint256:
     ...
 
 
