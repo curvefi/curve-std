@@ -14,6 +14,14 @@
 from curve_std import constants as c
 from snekmate.utils import math
 
+event EmaSetTime:
+    ema_id: String[4]
+    ema_time: uint256
+
+event EmaUpdate:
+    prev_value: uint256
+    queued_value: uint256
+
 # @notice Exponential Moving Average instance
 struct EMA:
     ema_time: uint256
@@ -71,6 +79,8 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
             queued_value=config.initial_value,
         )
         allow_list.append(id)
+        log EmaSetTime(ema_id=id, ema_time=config.ema_time)
+        log EmaUpdate(prev_value=config.initial_value, queued_value=config.initial_value)
 
     ALLOWED_EMAS = allow_list
 
@@ -99,6 +109,7 @@ def set_ema_time(_ema_id: String[4], _ema_time: uint256):
     self.update(_ema_id, self._emas[_ema_id].queued_value)
     assert _ema_time > 0  # dev: invalid ema_time
     self._emas[_ema_id].ema_time = _ema_time
+    log EmaSetTime(ema_id=_ema_id, ema_time=_ema_time)
 
 
 @internal
@@ -153,4 +164,5 @@ def update(_ema_id: String[4], _new_value: uint256) -> uint256:
         prev_timestamp=block.timestamp,
         queued_value=_new_value,
     )
+    log EmaUpdate(prev_value=smoothed, queued_value=_new_value)
     return smoothed
