@@ -14,13 +14,16 @@
 from curve_std import constants as c
 from snekmate.utils import math
 
+
 event EmaSetTime:
     ema_id: String[4]
     ema_time: uint256
 
+
 event EmaUpdate:
     prev_value: uint256
     queued_value: uint256
+
 
 # @notice Exponential Moving Average instance
 struct EMA:
