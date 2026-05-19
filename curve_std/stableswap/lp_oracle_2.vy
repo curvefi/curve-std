@@ -179,6 +179,12 @@ def _y_from_bisection(A_raw: uint256, p: uint256) -> uint256:
 @internal
 @pure
 def _get_x_y(A_raw: uint256, p: uint256) -> (uint256, uint256):
+    """
+    @dev Computes the StableSwap point (x, y) corresponding to target marginal price p and D=1.
+    @param A_raw Raw amplification coefficient scaled by A_PRECISION.
+    @param p Target marginal price.
+    @return (x, y) (x, y)-coordinates on the invariant.
+    """
     assert A_raw > 0
     assert A_raw <= MAX_A_RAW
     assert p != 0
@@ -197,13 +203,40 @@ def _get_x_y(A_raw: uint256, p: uint256) -> (uint256, uint256):
 @internal
 @pure
 def _portfolio_value(A_raw: uint256, p: uint256) -> uint256:
+    """
+    @dev Computes portfolio value x + p*y at the StableSwap point matching target price p.
+    @param A_raw Raw amplification coefficient scaled by A_PRECISION.
+    @param p Target marginal price.
+    @return Portfolio value denominated in x-units.
+    """
+    # Since p(y) = -dx/dy and portfolio_value(y) = x(y) + p(y) * y,
+    # we get d(portfolio_value)/dp = y. On this branch y <= 1/2, so
+    # portfolio_value as a function of price is 1/2-Lipschitz:
+    # |portfolio_value(y1) - portfolio_value(y0)| <= 1/2 * |p(y1) - p(y0)|.
+    # Therefore it is safe to search for y using an error tolerance in p:
+    # the resulting error in portfolio_value is no larger than the price error
+    # and is at most half of it on this branch.
     x: uint256 = 0
     y: uint256 = 0
     x, y = self._get_x_y(A_raw, p)
+    # Let q be the actual price of the found point, with |q - p| < eps.
+    # We want portfolio_value(p) = x(p) + p * y(p), but we have x(q), y(q).
+    #
+    # Use x + p * y, not x + q * y.
+    # Indeed, portfolio_value'(p) = y(p), so x(q) + q * y(q) differs from
+    # portfolio_value(p) by a first-order term ~ y(p) * (q - p).
+    # In x(q) + p * y(q), this first-order term cancels because dx/dp = -p * dy/dp.
+    # Hence its error is only second-order in |q - p|.
     return x + p * y // WAD
 
 
 @external
 @pure
 def portfolio_value(_A_raw: uint256, _p: uint256) -> uint256:
+    """
+    @notice Returns StableSwap portfolio value x + p*y for the point with marginal price p.
+    @param _A_raw Raw amplification coefficient scaled by A_PRECISION.
+    @param _p Target marginal price.
+    @return Portfolio value denominated in x-units.
+    """
     return self._portfolio_value(_A_raw, _p)
