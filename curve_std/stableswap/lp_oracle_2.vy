@@ -90,15 +90,12 @@ def _x_from_y(A_raw: uint256, y: uint256) -> uint256:
     #   |x_hat - x*| < 1 + (3*A_PRECISION)/(8*A_raw)
     #   => for A_raw >= 1:            |x_hat - x*| < 3751 wei
     #   => for A_raw >= A_PRECISION:  |x_hat - x*| < 2 wei
-    b1: int256 = convert(WAD, int256) - convert(4 * A_raw * (WAD - y) // A_PRECISION, int256)
+    b1: int256 = convert(WAD, int256) - convert(4 * A_raw * (WAD - y) // A_PRECISION, int256)  # revert on y > WAD
 
     abs_b1: uint256 = convert(abs(b1), uint256)
-    term: uint256 = unsafe_div(4 * A_raw * WAD3, A_PRECISION * y)
+    term: uint256 = (4 * A_raw * WAD3) // (A_PRECISION * y)  # revert on y == 0
     rad: int256 = convert(isqrt(abs_b1**2 + term), int256)
-    if rad <= b1:  # extra safety
-        return 0
-
-    return (convert(rad - b1, uint256) * A_PRECISION) // (8 * A_raw)
+    return (convert(rad - b1, uint256) * A_PRECISION) // (8 * A_raw)  # revert on A_raw == 0
 
 
 @internal
@@ -138,9 +135,7 @@ def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
     #   A_eff = 200    (A_raw = 200 * A_PRECISION):     |p_hat - p*| <= ~4.1e3 wei
     #   A_eff = 10_000 (A_raw = 10_000 * A_PRECISION):  |p_hat - p*| <= ~1.3e4 wei
     #   Relative error in all those sweeps is about 1e-18.
-    x: uint256 = self._x_from_y(A_raw, y)
-    if x == 0:
-        return max_value(uint256)
+    x: uint256 = self._x_from_y(A_raw, y)  # reverts on y == 0; x == 0 is impossible
 
     term4A: uint256 = (4 * A_raw * x) // A_PRECISION
     return unsafe_div(
