@@ -64,6 +64,11 @@ A_PRECISION: constant(uint256) = 10**4
 MAX_A: constant(uint256) = 100_000
 MAX_A_RAW: constant(uint256) = MAX_A * A_PRECISION
 
+# Conservative limits, something's off if variables hit these boundaries
+# Can be revised for specific use-cases
+MIN_P: constant(uint256) = 10 ** 16  # 0.01
+MAX_P: constant(uint256) = 10 ** 20  # 100
+
 BISECTION_ITERS: constant(uint256) = 60  # 10^18 < 2^60 < 10^19
 PRICE_TOL_REL: constant(uint256) = 10**6  # 0.01 bps
 
@@ -182,7 +187,7 @@ def _get_x_y(A_raw: uint256, p: uint256) -> (uint256, uint256):
     """
     assert A_raw > 0
     assert A_raw <= MAX_A_RAW
-    assert p != 0
+    assert MIN_P <= p and p <= MAX_P
 
     if p < WAD:
         p_inv: uint256 = unsafe_div(WAD2 + p // 2, p)
