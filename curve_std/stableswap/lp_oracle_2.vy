@@ -64,7 +64,7 @@ A_PRECISION: constant(uint256) = 10**4
 MAX_A: constant(uint256) = 100_000
 MAX_A_RAW: constant(uint256) = MAX_A * A_PRECISION
 
-BISECTION_ITERS: constant(uint256) = 64  # 2^64 < 10^19
+BISECTION_ITERS: constant(uint256) = 60  # 10^18 < 2^60 < 10^19
 PRICE_TOL_REL: constant(uint256) = 10**6  # 0.01 bps
 
 
