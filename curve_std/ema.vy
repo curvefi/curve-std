@@ -161,6 +161,7 @@ def update(_ema_id: String[4], _new_value: uint256) -> uint256:
     # to storage variables can lead to inconsistent EMAs).
     smoothed: uint256 = self.read(_ema_id)
 
+    assert _new_value <= max_value(uint256) // WAD, "Overflow"
     self._emas[_ema_id] = EMA(
         ema_time=self._emas[_ema_id].ema_time,
         prev_value=smoothed,
