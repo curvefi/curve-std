@@ -21,6 +21,7 @@ event EmaSetTime:
 
 
 event EmaUpdate:
+    ema_id: String[4]
     prev_value: uint256
     queued_value: uint256
 
@@ -83,7 +84,7 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
         )
         allow_list.append(id)
         log EmaSetTime(ema_id=id, ema_time=config.ema_time)
-        log EmaUpdate(prev_value=config.initial_value, queued_value=config.initial_value)
+        log EmaUpdate(ema_id=id, prev_value=config.initial_value, queued_value=config.initial_value)
 
     ALLOWED_EMAS = allow_list
 
@@ -168,5 +169,5 @@ def update(_ema_id: String[4], _new_value: uint256) -> uint256:
         prev_timestamp=block.timestamp,
         queued_value=_new_value,
     )
-    log EmaUpdate(prev_value=smoothed, queued_value=_new_value)
+    log EmaUpdate(ema_id=_ema_id, prev_value=smoothed, queued_value=_new_value)
     return smoothed
