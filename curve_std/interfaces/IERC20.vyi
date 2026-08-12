@@ -1,6 +1,9 @@
 # pragma version 0.4.3
 # See https://github.com/vyperlang/vyper/pull/4349 for rationale
 
+SYMBOL_MAX_LEN: constant(uint256) = 32
+NAME_MAX_LEN: constant(uint256) = 64
+
 # Events
 event Transfer:
     sender: indexed(address)
@@ -42,17 +45,13 @@ def approve(_spender: address, _value: uint256) -> bool:
     ...
 
 
-#NOTE: interface uses `String[1]` where 1 is the lower bound of the string returned by the function.
-#    For end-users this means they can't use `implements: ERC20Detailed` unless their implementation
-#    uses a value n >= 1. Regardless this is fine as one can't do String[0] where n == 0.
-
 @view
-def name() -> String[1]:
+def name() -> String[NAME_MAX_LEN]:
     ...
 
 
 @view
-def symbol() -> String[1]:
+def symbol() -> String[SYMBOL_MAX_LEN]:
     ...
 
 
