@@ -20,7 +20,7 @@ packages = ["curve_std"]
 [dependency-groups]
 dev = [
     "hypothesis>=6.148.7",
-    "pytest>=9.0.2",
+    "pytest>=9.0.3",
     "titanoboa>=0.2.8",
     "pre-commit==4.3.0",
     "pytest-xdist>=3.5",
