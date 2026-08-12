@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 
 [[package]]
@@ -492,6 +492,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "snekmate" },
+    { name = "titanoboa" },
     { name = "vyper" },
 ]
 
@@ -507,6 +508,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "snekmate", specifier = ">=0.1.2" },
+    { name = "titanoboa", specifier = ">=0.2.8" },
     { name = "vyper", specifier = "==0.4.3" },
 ]
 

@@ -66,8 +66,8 @@ MAX_A_RAW: constant(uint256) = MAX_A * A_PRECISION
 
 # Conservative limits, something's off if variables hit these boundaries
 # Can be revised for specific use-cases
-MIN_P: constant(uint256) = 10 ** 16  # 0.01
-MAX_P: constant(uint256) = 10 ** 20  # 100
+MIN_P: constant(uint256) = 10**16  # 0.01
+MAX_P: constant(uint256) = 10**20  # 100
 
 BISECTION_ITERS: constant(uint256) = 60  # 10^18 < 2^60 < 10^19
 PRICE_TOL_REL: constant(uint256) = 10**6  # 0.01 bps
@@ -95,7 +95,9 @@ def _x_from_y(A_raw: uint256, y: uint256) -> uint256:
     #   |x_hat - x*| < 1 + (3*A_PRECISION)/(8*A_raw)
     #   => for A_raw >= 1:            |x_hat - x*| < 3751 wei
     #   => for A_raw >= A_PRECISION:  |x_hat - x*| < 2 wei
-    b1: int256 = convert(WAD, int256) - convert(4 * A_raw * (WAD - y) // A_PRECISION, int256)  # revert on y > WAD
+    b1: int256 = convert(WAD, int256) - convert(
+        4 * A_raw * (WAD - y) // A_PRECISION, int256
+    )  # revert on y > WAD
 
     abs_b1: uint256 = convert(abs(b1), uint256)
     term: uint256 = (4 * A_raw * WAD3) // (A_PRECISION * y)  # revert on y == 0
