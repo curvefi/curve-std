@@ -76,6 +76,7 @@ def __init__(_ema_config: DynArray[EMAConfig, MAX_EMAS]):
         id: String[4] = config.ema_id
         for existing_id: String[4] in allow_list:
             assert existing_id != id  # dev: duplicate ema id
+        assert config.initial_value <= max_value(uint256) // WAD, "Overflow"
         self._emas[id] = EMA(
             ema_time=config.ema_time,
             prev_value=config.initial_value,
