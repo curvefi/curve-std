@@ -169,9 +169,7 @@ def _p_prime_abs(A_raw: uint256, x: uint256, y: uint256, p: uint256) -> uint256:
     # Thus xx + p2y2 > pxy in both cases, including floor rounding.
     n_w2: uint256 = xx + p2y2 - pxy
 
-    bracket: uint256 = (
-        (16 * A_raw * x * x * y) // (A_PRECISION * WAD2) + WAD
-    )
+    bracket: uint256 = ((16 * A_raw * x * x * y) // (A_PRECISION * WAD2) + WAD)
     xy2_w2: uint256 = unsafe_div(x * y * y, WAD)
     d_w2: uint256 = unsafe_div(xy2_w2 * bracket, WAD)
     return unsafe_div(2 * n_w2 * WAD, d_w2)
@@ -224,6 +222,7 @@ def _y_newton(A_raw: uint256, p: uint256) -> uint256:
 
         if unsafe_sub(hi, lo) <= 1:
             return hi
+
 
         # Once the Newton budget is exhausted, zero reaches the common
         # bisection fallback below without evaluating the derivative.
