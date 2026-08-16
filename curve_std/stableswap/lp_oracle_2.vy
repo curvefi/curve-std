@@ -46,15 +46,11 @@
 #     V(p_target) = p_target * V(p_inv)
 #     (x, y) at p_target is (y, x) at p_inv.
 #
-# 7) Method used here: pure bisection on g(y)
-#   Find y in bracket [lo, hi] such that:
-#     p(lo) > p_target >= p(hi)
-#   Update:
-#     if p(mid) > p_target: lo = mid
-#     else:                 hi = mid
-#   Stop when relative error is small:
-#     |p(mid)-p_target| / p_target <= 1 / PRICE_TOL_REL
-#   or hi-lo <= 1, or iteration cap.
+# 7) Method used here: bracketed Newton on g(y)
+#   Newton steps use the closed-form derivative p'(y). The monotone-price
+#   bracket [lo, hi] is updated on every iteration. After the Newton budget is
+#   exhausted, as well as for an unsafe or out-of-bracket Newton step, the next
+#   candidate falls through to the bisection midpoint.
 # =============================================================================
 WAD: constant(uint256) = 10**18
 WAD2: constant(uint256) = WAD * WAD
@@ -69,8 +65,16 @@ MAX_A_RAW: constant(uint256) = MAX_A * A_PRECISION
 MIN_P: constant(uint256) = 10**16  # 0.01
 MAX_P: constant(uint256) = 10**20  # 100
 
-BISECTION_ITERS: constant(uint256) = 60  # 10^18 < 2^60 < 10^19
+MAX_NEWTON_ITERS: constant(uint256) = 16
+BISECTION_ITERS: constant(uint256) = 60
+MAX_ITERS: constant(uint256) = MAX_NEWTON_ITERS + BISECTION_ITERS
 PRICE_TOL_REL: constant(uint256) = 10**6  # 0.01 bps
+
+# With y <= WAD/2, the raw product p^2*y^2 in Newton's derivative has the
+# uint256 hard limit p < 680.56*WAD; this bound leaves 1.85x headroom.
+# On the same branch the invariant gives p(y) >= x(y), so bounding p also
+# keeps x around 500*WAD, far below its independent 833_456.55*WAD limit.
+SAFE_P_MAX: constant(uint256) = 500 * WAD
 
 
 @internal
@@ -136,7 +140,7 @@ def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
     # Equivalent relative form (first-order):
     #   |p_hat - p*| / p* ~= deltaN / N + deltaD / D + 1 / p*
     #
-    # Empirical examples on solver domain y in [WAD/10^5, WAD/2+1]
+    # Empirical examples on sampled domain y in [WAD/10^5, WAD/2+1]
     # (dense y-sweep, high-precision reference; illustrative, not a proof):
     #   A_eff = 1      (A_raw = 1 * A_PRECISION):       |p_hat - p*| <= ~6.3e3 wei
     #   A_eff = 200    (A_raw = 200 * A_PRECISION):     |p_hat - p*| <= ~4.1e3 wei
@@ -153,28 +157,94 @@ def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
 
 @internal
 @pure
-def _y_from_bisection(A_raw: uint256, p: uint256) -> uint256:
+def _p_prime_abs(A_raw: uint256, x: uint256, y: uint256, p: uint256) -> uint256:
+    # From implicit differentiation of the invariant:
+    #   p'(y) = -2 * (x^2 - p*x*y + p^2*y^2)
+    #            / (x*y^2 * (16*A_eff*x^2*y + 1)).
+    xx: uint256 = x * x
+    pxy: uint256 = unsafe_div(p * x * y, WAD)
+    p2y2: uint256 = unsafe_div(p * p * y * y, WAD2)
+    # For r = p*y/WAD, integer arithmetic gives pxy = floor(x*r) and
+    # p2y2 = floor(r^2). If r < x, pxy < x^2; otherwise p2y2 >= pxy.
+    # Thus xx + p2y2 > pxy in both cases, including floor rounding.
+    n_w2: uint256 = xx + p2y2 - pxy
+
+    bracket: uint256 = (
+        (16 * A_raw * x * x * y) // (A_PRECISION * WAD2) + WAD
+    )
+    xy2_w2: uint256 = unsafe_div(x * y * y, WAD)
+    d_w2: uint256 = unsafe_div(xy2_w2 * bracket, WAD)
+    return unsafe_div(2 * n_w2 * WAD, d_w2)
+
+
+@internal
+@pure
+def _y_initial_guess(A_raw: uint256, p: uint256) -> uint256:
+    # High-A asymptotic on the p >= WAD branch:
+    #   y_0 = 1 / (4 * sqrt(A_eff * (p - 1))).
+    if p <= WAD:
+        return WAD // 2
+
+    return isqrt(
+        unsafe_div(
+            WAD3 * A_PRECISION,
+            16 * A_raw * unsafe_sub(p, WAD),
+        )
+    )
+
+
+@internal
+@pure
+def _y_newton(A_raw: uint256, p: uint256) -> uint256:
     # Solve g(y) = p(y) - p_target = 0 on monotone branch y in (0, 1/2].
+    # The shared loop evaluates a candidate before proposing the next one, so
+    # the 60-iteration bisection suffix evaluates 59 midpoints. This suffices
+    # because the initial bracket width WAD/2 is strictly less than 2**59.
     assert p >= WAD
     lo: uint256 = 1
     hi: uint256 = WAD // 2 + 1  # y for p = 1
+    y: uint256 = self._y_initial_guess(A_raw, p)
+    if y <= lo:
+        y = lo + 1
+    if y >= hi:
+        y = hi - 1
 
-    for _: uint256 in range(BISECTION_ITERS):
-        mid: uint256 = unsafe_div(unsafe_add(lo, hi), 2)
-        pm: uint256 = self._p_from_y(A_raw, mid)
-        tol_abs: uint256 = unsafe_div(p, PRICE_TOL_REL)
+    tol_abs: uint256 = unsafe_div(p, PRICE_TOL_REL)
+    for iteration: uint256 in range(MAX_ITERS):
+        pm: uint256 = self._p_from_y(A_raw, y)
 
         if pm > p:
             if unsafe_sub(pm, p) <= tol_abs:
-                return mid
-            lo = mid
+                return y
+            lo = y
         else:
             if unsafe_sub(p, pm) <= tol_abs:
-                return mid
-            hi = mid
+                return y
+            hi = y
 
         if unsafe_sub(hi, lo) <= 1:
             return hi
+
+        # Once the Newton budget is exhausted, zero reaches the common
+        # bisection fallback below without evaluating the derivative.
+        y_new: uint256 = 0
+        if iteration < MAX_NEWTON_ITERS and pm < SAFE_P_MAX:
+            x: uint256 = self._x_from_y(A_raw, y)
+            # With g(y) = pm - p and ppy representing |g'(y)|*WAD:
+            # y_new = y - g/g' = y + (pm*WAD/ppy - p*WAD/ppy).
+            ppy: uint256 = self._p_prime_abs(A_raw, x, y, pm)
+            delta: uint256 = unsafe_sub(
+                unsafe_div(pm * WAD, ppy),
+                unsafe_div(p * WAD, ppy),
+            )
+            # Each quotient is < 5e38, so a wrapped negative correction cannot
+            # wrap back into the bracket after it is added to y.
+            y_new = unsafe_add(y, delta)
+
+        if y_new <= lo or y_new >= hi:  # bisection fallback
+            y_new = unsafe_div(lo + hi, 2)
+        y = y_new
+
     raise "Didn't converge"  # Unreachable
 
 
@@ -193,11 +263,11 @@ def _get_x_y(A_raw: uint256, p: uint256) -> (uint256, uint256):
 
     if p < WAD:
         p_inv: uint256 = unsafe_div(WAD2 + p // 2, p)
-        y_inv: uint256 = self._y_from_bisection(A_raw, p_inv)
+        y_inv: uint256 = self._y_newton(A_raw, p_inv)
         x_inv: uint256 = self._x_from_y(A_raw, y_inv)
         return y_inv, x_inv
 
-    y: uint256 = self._y_from_bisection(A_raw, p)
+    y: uint256 = self._y_newton(A_raw, p)
     x: uint256 = self._x_from_y(A_raw, y)
     return x, y
 
