@@ -222,8 +222,6 @@ def _y_newton(A_raw: uint256, p: uint256) -> uint256:
 
         if unsafe_sub(hi, lo) <= 1:
             return hi
-
-
         # Once the Newton budget is exhausted, zero reaches the common
         # bisection fallback below without evaluating the derivative.
         y_new: uint256 = 0
