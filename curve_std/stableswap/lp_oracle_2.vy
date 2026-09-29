@@ -165,14 +165,15 @@ def _p_prime_abs(A_raw: uint256, x: uint256, y: uint256, p: uint256) -> uint256:
     #   p'(y) = -2 * (x^2 - p*x*y + p^2*y^2)
     #            / (x*y^2 * (16*A_eff*x^2*y + 1)).
     xx: uint256 = x * x
-    pxy: uint256 = unsafe_div(p * x * y, WAD)
-    p2y2: uint256 = unsafe_div(p * p * y * y, WAD2)
+    py: uint256 = p * y
+    pxy: uint256 = unsafe_div(x * py, WAD)
+    p2y2: uint256 = unsafe_div(py * py, WAD2)
     # For r = p*y/WAD, integer arithmetic gives pxy = floor(x*r) and
     # p2y2 = floor(r^2). If r < x, pxy < x^2; otherwise p2y2 >= pxy.
     # Thus xx + p2y2 > pxy in both cases, including floor rounding.
     n_w2: uint256 = xx + p2y2 - pxy
 
-    bracket: uint256 = ((16 * A_raw * x * x * y) // (A_PRECISION * WAD2) + WAD)
+    bracket: uint256 = ((16 * A_raw * xx * y) // (A_PRECISION * WAD2) + WAD)
     xy2_w2: uint256 = unsafe_div(x * y * y, WAD)
     d_w2: uint256 = unsafe_div(xy2_w2 * bracket, WAD)
     return unsafe_div(2 * n_w2 * WAD, d_w2)
