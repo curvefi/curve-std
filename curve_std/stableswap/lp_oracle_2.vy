@@ -198,7 +198,10 @@ def _y_initial_guess(A_raw: uint256, p: uint256) -> uint256:
 
 @internal
 @pure
-def _y_newton(A_raw: uint256, p: uint256) -> uint256:
+def _y_newton(A_raw: uint256, p: uint256) -> (uint256, uint256):
+    """
+    @return (x, y) (x, y)-coordinates on the invariant
+    """
     # Solve g(y) = p(y) - p_target = 0 on monotone branch y in (0, 1/2].
     # The shared loop evaluates a candidate before proposing the next one, so
     # the 60-iteration bisection suffix evaluates 59 midpoints. This suffices
@@ -219,15 +222,15 @@ def _y_newton(A_raw: uint256, p: uint256) -> uint256:
 
         if pm > p:
             if unsafe_sub(pm, p) <= tol_abs:
-                return y
+                return x, y
             lo = y
         else:
             if unsafe_sub(p, pm) <= tol_abs:
-                return y
+                return x, y
             hi = y
 
         if unsafe_sub(hi, lo) <= 1:
-            return hi
+            return self._x_from_y(A_raw, hi), hi
         # Once the Newton budget is exhausted, zero reaches the common
         # bisection fallback below without evaluating the derivative.
         y_new: uint256 = 0
@@ -265,13 +268,12 @@ def _get_x_y(A_raw: uint256, p: uint256) -> (uint256, uint256):
 
     if p < WAD:
         p_inv: uint256 = unsafe_div(WAD2 + p // 2, p)
-        y_inv: uint256 = self._y_newton(A_raw, p_inv)
-        x_inv: uint256 = self._x_from_y(A_raw, y_inv)
+        x_inv: uint256 = 0
+        y_inv: uint256 = 0
+        x_inv, y_inv = self._y_newton(A_raw, p_inv)
         return y_inv, x_inv
 
-    y: uint256 = self._y_newton(A_raw, p)
-    x: uint256 = self._x_from_y(A_raw, y)
-    return x, y
+    return self._y_newton(A_raw, p)
 
 
 @internal
