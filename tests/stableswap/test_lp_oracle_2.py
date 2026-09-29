@@ -6,7 +6,7 @@ from hypothesis import strategies as st
 
 WAD = 10**18
 A_PRECISION = 10**4
-MAX_A_RAW = 100_000 * A_PRECISION
+MAX_A_RAW = 500_000 * A_PRECISION
 UINT256_MAX = 2**256 - 1
 
 SAFE_P_MAX = 500 * WAD
@@ -21,7 +21,7 @@ def oracle():
     max_examples=1000,
 )
 @given(
-    a_eff=st.integers(min_value=1, max_value=100_000 * A_PRECISION),
+    a_eff=st.integers(min_value=1, max_value=MAX_A_RAW),
     p_int=st.integers(min_value=10**16, max_value=10**20),  # [0.01, 100.0] * WAD
 )
 def test_oracle_against_invariant(oracle, a_eff, p_int):
@@ -62,6 +62,12 @@ def test_convergence_at_input_boundaries(oracle, a_raw, p):
     p_hat = (term4a_wad + inv1) * WAD // (term4a_wad + inv2)
 
     assert p_hat == pytest.approx(p, rel=2e-6)
+
+
+@pytest.mark.parametrize("a_raw", [0, MAX_A_RAW + 1])
+def test_reverts_outside_a_range(oracle, a_raw):
+    with boa.reverts():
+        oracle.portfolio_value(a_raw, WAD)
 
 
 def test_p_prime_bracket_precision(oracle):
@@ -111,3 +117,11 @@ def test_newton_safe_p_bound_fits_uint256():
 
     # This nearby round limit demonstrates which product determines the cap.
     assert (681 * WAD) ** 2 * y**2 > UINT256_MAX
+
+    # x*y^2 * bracket sets the independent x limit quoted next to SAFE_P_MAX.
+    def denominator(x):
+        bracket = WAD + 16 * MAX_A_RAW * x * x * y // (A_PRECISION * WAD**2)
+        return (x * y * y // WAD) * bracket
+
+    assert denominator(487_408 * WAD) <= UINT256_MAX
+    assert denominator(487_409 * WAD) > UINT256_MAX

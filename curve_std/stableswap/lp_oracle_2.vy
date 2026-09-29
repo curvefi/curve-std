@@ -57,7 +57,7 @@ WAD2: constant(uint256) = WAD * WAD
 WAD3: constant(uint256) = WAD2 * WAD
 
 A_PRECISION: constant(uint256) = 10**4
-MAX_A: constant(uint256) = 100_000
+MAX_A: constant(uint256) = 500_000
 MAX_A_RAW: constant(uint256) = MAX_A * A_PRECISION
 
 # Conservative limits, something's off if variables hit these boundaries
@@ -73,7 +73,7 @@ PRICE_TOL_REL: constant(uint256) = 10**6  # 0.01 bps
 # With y <= WAD/2, the raw product p^2*y^2 in Newton's derivative has the
 # uint256 hard limit p < 680.56*WAD; this bound leaves 1.85x headroom.
 # On the same branch the invariant gives p(y) >= x(y), so bounding p also
-# keeps x around 500*WAD, far below its independent 833_456.55*WAD limit.
+# keeps x around 500*WAD, far below its independent 487_408.35*WAD limit.
 SAFE_P_MAX: constant(uint256) = 500 * WAD
 
 
