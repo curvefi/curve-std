@@ -51,6 +51,8 @@
 #   bracket [lo, hi] is updated on every iteration. After the Newton budget is
 #   exhausted, as well as for an unsafe or out-of-bracket Newton step, the next
 #   candidate falls through to the bisection midpoint.
+#   The first candidate interpolates the constant-product and high-A limits:
+#     1 / y_0^2 = 4*p_target + 16*A_eff*(p_target - 1)
 # =============================================================================
 WAD: constant(uint256) = 10**18
 WAD2: constant(uint256) = WAD * WAD
@@ -145,9 +147,9 @@ def _p_from_x_y(A_raw: uint256, x: uint256, y: uint256) -> uint256:
     #
     # Empirical examples on sampled domain y in [WAD/10^5, WAD/2+1]
     # (dense y-sweep, high-precision reference; illustrative, not a proof):
-    #   A_eff = 1      (A_raw = 1 * A_PRECISION):       |p_hat - p*| <= ~6.3e3 wei
-    #   A_eff = 200    (A_raw = 200 * A_PRECISION):     |p_hat - p*| <= ~4.1e3 wei
-    #   A_eff = 10_000 (A_raw = 10_000 * A_PRECISION):  |p_hat - p*| <= ~1.3e4 wei
+    #   A_eff = 1       (A_raw = 1 * A_PRECISION):        |p_hat - p*| <= ~6.3e3 wei
+    #   A_eff = 200     (A_raw = 200 * A_PRECISION):      |p_hat - p*| <= ~4.1e3 wei
+    #   A_eff = 500_000 (A_raw = 500_000 * A_PRECISION):  |p_hat - p*| <= ~1.2e3 wei
     #   Relative error in all those sweeps is about 1e-18.
     term4A: uint256 = (4 * A_raw * x) // A_PRECISION
     return unsafe_div(
