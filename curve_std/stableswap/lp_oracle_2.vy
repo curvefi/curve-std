@@ -111,7 +111,10 @@ def _x_from_y(A_raw: uint256, y: uint256) -> uint256:
 
 @internal
 @pure
-def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
+def _p_from_x_y(A_raw: uint256, x: uint256, y: uint256) -> uint256:
+    """
+    @param x Must be _x_from_y(A_raw, y); the caller passes it to reuse it for p'(y).
+    """
     # p(y) = -dx/dy:
     #   p(y) = (4A + 1/(4*x*y^2)) / (4A + 1/(4*x^2*y))
     # Multiply numerator and denominator by x to reduce one division by x:
@@ -146,8 +149,6 @@ def _p_from_y(A_raw: uint256, y: uint256) -> uint256:
     #   A_eff = 200    (A_raw = 200 * A_PRECISION):     |p_hat - p*| <= ~4.1e3 wei
     #   A_eff = 10_000 (A_raw = 10_000 * A_PRECISION):  |p_hat - p*| <= ~1.3e4 wei
     #   Relative error in all those sweeps is about 1e-18.
-    x: uint256 = self._x_from_y(A_raw, y)  # reverts on y == 0; x == 0 is impossible
-
     term4A: uint256 = (4 * A_raw * x) // A_PRECISION
     return unsafe_div(
         (term4A + unsafe_div(WAD3, 4 * y * y)) * WAD,
@@ -210,7 +211,8 @@ def _y_newton(A_raw: uint256, p: uint256) -> uint256:
 
     tol_abs: uint256 = unsafe_div(p, PRICE_TOL_REL)
     for iteration: uint256 in range(MAX_ITERS):
-        pm: uint256 = self._p_from_y(A_raw, y)
+        x: uint256 = self._x_from_y(A_raw, y)  # reverts on y == 0; x == 0 is impossible
+        pm: uint256 = self._p_from_x_y(A_raw, x, y)
 
         if pm > p:
             if unsafe_sub(pm, p) <= tol_abs:
@@ -227,7 +229,6 @@ def _y_newton(A_raw: uint256, p: uint256) -> uint256:
         # bisection fallback below without evaluating the derivative.
         y_new: uint256 = 0
         if iteration < MAX_NEWTON_ITERS and pm < SAFE_P_MAX:
-            x: uint256 = self._x_from_y(A_raw, y)
             # With g(y) = pm - p and ppy representing |g'(y)|*WAD:
             # y_new = y - g/g' = y + (pm*WAD/ppy - p*WAD/ppy).
             ppy: uint256 = self._p_prime_abs(A_raw, x, y, pm)

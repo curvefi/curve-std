@@ -101,7 +101,7 @@ def test_p_prime_bracket_precision(oracle):
     a_raw = 2_530
     y = 41_516_227_294_767_401
     x = oracle.internal._x_from_y(a_raw, y)
-    p = oracle.internal._p_from_y(a_raw, y)
+    p = oracle.internal._p_from_x_y(a_raw, x, y)
 
     xx = x * x
     pxy = p * x * y // WAD
