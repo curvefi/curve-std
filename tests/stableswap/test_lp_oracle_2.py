@@ -1,3 +1,5 @@
+from math import isqrt
+
 import boa
 import pytest
 from hypothesis import given, settings
@@ -51,6 +53,10 @@ def test_oracle_against_invariant(oracle, a_eff, p_int):
         (MAX_A_RAW, 10**16),
         (MAX_A_RAW, WAD),
         (MAX_A_RAW, 10**20),
+        # Low-amplification points where the high-A initial guess was slow.
+        (2_040, 3_437_214_130_349_999_616),
+        (21, 2_700_054_615_852_964_352),
+        (10_000, 23_293_208_816_245_077_837),
     ],
 )
 def test_convergence_at_input_boundaries(oracle, a_raw, p):
@@ -62,6 +68,25 @@ def test_convergence_at_input_boundaries(oracle, a_raw, p):
     p_hat = (term4a_wad + inv1) * WAD // (term4a_wad + inv2)
 
     assert p_hat == pytest.approx(p, rel=2e-6)
+
+
+@given(
+    a_raw=st.integers(min_value=1, max_value=MAX_A_RAW),
+    p=st.integers(min_value=WAD, max_value=10**20),
+)
+def test_initial_guess_inside_bracket(oracle, a_raw, p):
+    y_0 = oracle.internal._y_initial_guess(a_raw, p)
+
+    assert 1 < y_0 <= WAD // 2
+    # Both closed-form limits bound the interpolated guess from above.
+    assert y_0 <= isqrt(WAD**3 // (4 * p))
+    if p > WAD:
+        assert y_0 <= isqrt(WAD**3 * A_PRECISION // (16 * a_raw * (p - WAD)))
+
+
+@pytest.mark.parametrize("a_raw", [1, A_PRECISION, MAX_A_RAW])
+def test_initial_guess_is_exact_at_peg(oracle, a_raw):
+    assert oracle.internal._y_initial_guess(a_raw, WAD) == WAD // 2
 
 
 @pytest.mark.parametrize("a_raw", [0, MAX_A_RAW + 1])

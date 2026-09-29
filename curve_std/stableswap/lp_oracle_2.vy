@@ -178,15 +178,16 @@ def _p_prime_abs(A_raw: uint256, x: uint256, y: uint256, p: uint256) -> uint256:
 @internal
 @pure
 def _y_initial_guess(A_raw: uint256, p: uint256) -> uint256:
-    # High-A asymptotic on the p >= WAD branch:
-    #   y_0 = 1 / (4 * sqrt(A_eff * (p - 1))).
-    if p <= WAD:
-        return WAD // 2
-
+    # Interpolates the two closed-form limits of the p >= WAD branch:
+    #   A_eff -> 0   (constant product):  y = 1 / (2 * sqrt(p))
+    #   A_eff -> inf (high-A asymptotic): y = 1 / (4 * sqrt(A_eff * (p - 1)))
+    # by adding their 1/y^2:
+    #   1 / y_0^2 = 4*p + 16*A_eff*(p - 1),
+    # which is exact (y_0 = 1/2) at p = 1 for every A_eff.
     return isqrt(
         unsafe_div(
             WAD3 * A_PRECISION,
-            16 * A_raw * unsafe_sub(p, WAD),
+            4 * A_PRECISION * p + 16 * A_raw * (p - WAD),  # revert on p < WAD
         )
     )
 
